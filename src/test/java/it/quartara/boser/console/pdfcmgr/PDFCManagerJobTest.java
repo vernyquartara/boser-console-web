@@ -157,6 +157,40 @@ public class PDFCManagerJobTest {
 	}
 	
 	@Test
+	public void shouldntStopInstanceBeforeInterval2() throws Exception {
+		Date instanceDate = DateUtils.parseDate("05/07/15 11:41:30", DATE_PATTERN);
+		Date lastConvDate = DateUtils.parseDate("05/07/15 11:56:12", DATE_PATTERN);
+		Date now = DateUtils.parseDate("05/07/15 12:51:53", DATE_PATTERN);
+		short standbyInterval = 55;
+		
+		mockStatic(AWSHelper.class);
+		when(AWSHelper.createAmazonEC2Client(anyString())).thenReturn(ec2);
+		when(AWSHelper.getInstance(eq(ec2), anyString())).thenReturn(instance);
+		InstanceState instanceState = mock(InstanceState.class);
+		when(instance.getState()).thenReturn(instanceState);
+		when(instanceState.getName()).thenReturn("running");
+		
+		when(conn.createStatement()).thenReturn(stat);
+		when(stat.executeQuery(anyString())).thenReturn(rs);
+		when(rs.getDate(1)).thenReturn(new java.sql.Date(lastConvDate.getTime()));
+		whenNew(Date.class).withNoArguments().thenReturn(now);
+		
+		mockStatic(PDFCManagerHelper.class);
+		when(PDFCManagerHelper.getStandbyInterval(any(Connection.class))).thenReturn(standbyInterval);
+		
+		PDFCManagerJob job = spy(new PDFCManagerJob());
+		job.setInstanceDate(instanceDate);
+		job.setDs(ds);
+		doReturn(false).when(job, "isCurrentlyConverting", any(Connection.class));
+		doReturn(lastConvDate).when(job, "getLastConversionDate", any(Connection.class));
+		doReturn(false).when(job, "isTimeToStandby", instanceDate, lastConvDate, standbyInterval);
+		
+		job.execute(context);
+		
+		verifyPrivate(job).invoke("isCurrentlyConverting", any(Connection.class));
+	}
+	
+	@Test
 	public void shouldNotUpdateInstanceDateIfLessThanOneHourHasPassed() throws Exception {
 		Date instanceDate = DateUtils.parseDate("05/07/15 11:49:30", DATE_PATTERN);
 		Date now = DateUtils.parseDate("05/07/15 12:47:33", DATE_PATTERN);

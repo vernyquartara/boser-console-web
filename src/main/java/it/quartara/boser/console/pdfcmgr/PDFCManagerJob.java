@@ -175,6 +175,7 @@ public class PDFCManagerJob implements Job {
 	private void updateInstanceDate() {
 		Date instanceDatePlusOneHour = DateUtils.addHours(instanceDate, 1);
 		if (new Date().after(instanceDatePlusOneHour)) {
+			log.debug("updating instanceDate to ", instanceDate);
 			instanceDate = instanceDatePlusOneHour;
 		}
 	}
