@@ -1,6 +1,7 @@
 package it.quartara.boser.console.pdfcmgr;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
@@ -118,7 +119,10 @@ public class PDFCManagerServletTest {
 		when(AWSHelper.createAmazonEC2Client(anyString())).thenReturn(ec2);
 		when(AWSHelper.getInstance(eq(ec2), anyString())).thenReturn(instance);
 		mockStatic(PDFCManagerHelper.class);
-		doNothing().when(PDFCManagerHelper.class, "scheduleStandbyJob", any(DataSource.class), any(ServletContext.class), any(Date.class));
+		doNothing().when(PDFCManagerHelper.class, "scheduleStandbyJob", any(DataSource.class), 
+																		any(ServletContext.class), 
+																		any(Date.class),
+																		anyBoolean());
 		
 		PDFCManagerServlet servlet = spy(new PDFCManagerServlet());
 		doReturn(mock(ServletContext.class)).when(servlet).getServletContext();
