@@ -5,14 +5,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.DateFormat;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 
 import javax.sql.DataSource;
 
 import org.apache.commons.lang3.time.DateUtils;
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
+import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
+import org.quartz.PersistJobDataAfterExecution;
 import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +41,8 @@ import com.amazonaws.services.ec2.model.StopInstancesRequest;
  * @author Verny Quartara
  *
  */
+@DisallowConcurrentExecution
+@PersistJobDataAfterExecution
 public class PDFCManagerJob implements Job {
 	
 	private static final Logger log = LoggerFactory.getLogger(PDFCManagerJob.class);
@@ -57,11 +64,21 @@ public class PDFCManagerJob implements Job {
 	 */
 	@Override
 	public void execute(JobExecutionContext context) throws JobExecutionException {
-		log.debug("executing, instanceDate: {}", DateFormat.getDateTimeInstance().format(instanceDate));
+		log.debug("executing, instanceDate: {}", 
+				DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, Locale.ITALY).format(instanceDate));
+		String instanceId;
+		try {
+			Connection conn = ds.getConnection();
+			instanceId = PDFCManagerHelper.getInstanceId(conn);
+			conn.close();
+		} catch (SQLException e) {
+			log.error("instance id non trovato, controllo remoto non disponibile");
+			throw new JobExecutionException(e);
+		} 
 		AmazonEC2 ec2 = AWSHelper.createAmazonEC2Client(AWSHelper.CREDENTIALS_PROFILE);
-		Instance instance = AWSHelper.getInstance(ec2, AWSHelper.INSTANCE_ID);
+		Instance instance = AWSHelper.getInstance(ec2, instanceId);
 		
-		updateInstanceDate();
+		updateInstanceDate(context.getJobDetail().getJobDataMap());
 		/*
 		 * se l'istanza è già stoppata, non ha più senso eseguire il job, si deschedula
 		 */
@@ -80,25 +97,8 @@ public class PDFCManagerJob implements Job {
     		log.error(msg);
     		throw new JobExecutionException(msg);
     	}
-		/*
-		 * avvio la transazione e
-		 * controllo se ci sono conversioni in corso
-		try {
-			Class.forName("com.mysql.jdbc.Driver");
-		} catch (ClassNotFoundException e) {
-			log.error("driver mysql non presente, si deschedula il job", e);
-			try {
-				context.getScheduler().unscheduleJob(context.getTrigger().getKey());
-			} catch (SchedulerException ex) {
-				log.error("impossibile deschedulare il job", ex);
-				throw new JobExecutionException(ex);
-			}
-		}
-		 */
     	Connection conn = null;
 		try {
-			//conn = DriverManager.getConnection("jdbc:mysql://quartara.cirpu298n17l.eu-central-1.rds.amazonaws.com:3306/boser","boser","boser");
-			//conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/boser","boser","boser");
 			conn = ds.getConnection();
 			conn.setAutoCommit(Boolean.FALSE);
 			conn.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
@@ -110,6 +110,7 @@ public class PDFCManagerJob implements Job {
     	if (isCurrentlyConverting(conn)) {
     		try {
 				conn.commit();
+				conn.close();
 			} catch (SQLException e) {
 				log.error("impossibile effettuare il commit della connessione al db", e);
 			}
@@ -131,6 +132,7 @@ public class PDFCManagerJob implements Job {
 			log.error("errore di lettura dal db", e);
 			try {
 				conn.rollback();
+				conn.close();
 			} catch (SQLException e1) {
 				log.error("impossibile effettuare il rollback della connessione al db", e1);
 			}
@@ -139,6 +141,7 @@ public class PDFCManagerJob implements Job {
 			log.error("impossibile deschedulare il job", e);
 			try {
 				conn.rollback();
+				conn.close();
 			} catch (SQLException e1) {
 				log.error("impossibile effettuare il rollback della connessione al db", e1);
 			}
@@ -151,7 +154,7 @@ public class PDFCManagerJob implements Job {
 		if (isTimeToStandby(instanceDate, lastConversionDate, standbyInterval)) {
 			log.info("stopping instance...");
 			StopInstancesRequest stopInstancesRequest = new StopInstancesRequest();
-			stopInstancesRequest.withInstanceIds(AWSHelper.INSTANCE_ID);
+			stopInstancesRequest.withInstanceIds(instanceId);
 			ec2.stopInstances(stopInstancesRequest);
 			log.info("richiesta di stop inviata. il job sarà deschedulato");
 			try {
@@ -163,6 +166,7 @@ public class PDFCManagerJob implements Job {
 		}
 		try {
 			conn.commit();
+			conn.close();
 		} catch (SQLException e) {
 			log.error("impossibile effettuare il commit della connessione al db", e);
 		}
@@ -171,12 +175,28 @@ public class PDFCManagerJob implements Job {
 	/*
 	 * se è passata più di un'ora dall'orario di avvio,
 	 * aggiorna l'orario aggiungendo un'ora.
+	 * 
+	 * algoritmo: si considerano le date instanceDate e now.
+	 * si conta quante ore bisogna aggiugere a instanceDate.
+	 * per farlo, si aggiunge 1 ora a instanceDate finché valgono due condizioni:
+	 * 1) instanceDate + counter (counter parte da 0) è minore di now - 1 ora
+	 * 2) trunc(instanceDate, H) minore di trunc(now)
 	 */
-	private void updateInstanceDate() {
-		Date instanceDatePlusOneHour = DateUtils.addHours(instanceDate, 1);
-		if (new Date().after(instanceDatePlusOneHour)) {
-			log.debug("updating instanceDate to ", instanceDate);
-			instanceDate = instanceDatePlusOneHour;
+	private void updateInstanceDate(JobDataMap jobDataMap) {
+		Date now = new Date();
+		Date truncatedInstanceDate = DateUtils.truncate(instanceDate, Calendar.HOUR);
+		Date truncatedActualDate = DateUtils.truncate(now, Calendar.HOUR);
+		int counter = 0;
+		while (DateUtils.addHours(instanceDate, counter).before(DateUtils.addHours(now, -1))
+				&& truncatedInstanceDate.before(truncatedActualDate)) {
+			truncatedInstanceDate = DateUtils.addHours(truncatedInstanceDate, 1);
+			counter++;
+		}
+		if (counter>0) {
+			instanceDate = DateUtils.addHours(instanceDate, counter);
+			log.info("updating instanceDate to {}", 
+					DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, Locale.ITALY).format(instanceDate));
+			jobDataMap.put(PDFCManagerJob.INSTANCE_DATE_KEY, instanceDate);
 		}
 	}
 

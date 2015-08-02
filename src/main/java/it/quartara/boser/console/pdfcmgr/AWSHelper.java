@@ -16,7 +16,6 @@ import com.amazonaws.services.ec2.model.Instance;
 
 public class AWSHelper {
 	
-	public static final String INSTANCE_ID = "i-108733d1";
 	public static final String CREDENTIALS_PROFILE = "boser-console";
 	
 	public static AmazonEC2 createAmazonEC2Client(String profileName) {

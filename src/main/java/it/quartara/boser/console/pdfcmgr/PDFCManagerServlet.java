@@ -1,5 +1,7 @@
 package it.quartara.boser.console.pdfcmgr;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 import javax.annotation.Resource;
 import javax.servlet.RequestDispatcher;
@@ -40,8 +42,19 @@ public class PDFCManagerServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         AmazonEC2 ec2 = AWSHelper.createAmazonEC2Client(AWSHelper.CREDENTIALS_PROFILE);
+        String instanceId;
+		try {
+			Connection conn = ds.getConnection();
+			instanceId = PDFCManagerHelper.getInstanceId(conn);
+			conn.close();
+		} catch (SQLException e) {
+			log.error("instance id non trovato, controllo remoto non disponibile", e);
+			RequestDispatcher rd = req.getRequestDispatcher("/WEB-INF/jsps/pdfcmgrerror.jsp");
+            rd.forward(req, resp);
+            return;
+		} 
         try {
-        	Instance instance = AWSHelper.getInstance(ec2, AWSHelper.INSTANCE_ID);
+        	Instance instance = AWSHelper.getInstance(ec2, instanceId);
         	
         	log.debug("getInstanceId {}", instance.getInstanceId());
         	log.debug("getLaunchTime {}", instance.getLaunchTime());
@@ -80,19 +93,30 @@ public class PDFCManagerServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
+		String instanceId;
+		try {
+			Connection conn = ds.getConnection();
+			instanceId = PDFCManagerHelper.getInstanceId(conn);
+			conn.close();
+		} catch (SQLException e) {
+			log.error("instance id non trovato, controllo remoto non disponibile", e);
+			RequestDispatcher rd = req.getRequestDispatcher("/WEB-INF/jsps/pdfcmgrerror.jsp");
+            rd.forward(req, resp);
+            return;
+		} 
 		/*
 		 * avviare la VM
 		 * se lo STATUS è running non deve fare nulla (redirect diretto)
 		 */
 		AmazonEC2 ec2 = AWSHelper.createAmazonEC2Client(AWSHelper.CREDENTIALS_PROFILE);
         try {
-        	Instance instance = AWSHelper.getInstance(ec2, AWSHelper.INSTANCE_ID);
+        	Instance instance = AWSHelper.getInstance(ec2, instanceId);
         	if (instance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
         		resp.sendRedirect(TARGET_URL);
         		return;
         	}
         	StartInstancesRequest startInstancesRequest = new StartInstancesRequest();
-        	startInstancesRequest.withInstanceIds(AWSHelper.INSTANCE_ID);
+        	startInstancesRequest.withInstanceIds(instanceId);
         	ec2.startInstances(startInstancesRequest);
         	log.debug("start request submitted");
         	
@@ -104,7 +128,7 @@ public class PDFCManagerServlet extends HttpServlet {
 					//nop
 				}
         		log.debug("checking status...");
-        		instance = AWSHelper.getInstance(ec2, AWSHelper.INSTANCE_ID);
+        		instance = AWSHelper.getInstance(ec2, instanceId);
         		if (instance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
         			running = true;
         			log.debug("instance's running. lauch time: {}", instance.getLaunchTime());

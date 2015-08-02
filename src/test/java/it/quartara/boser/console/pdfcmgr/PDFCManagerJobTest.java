@@ -31,6 +31,7 @@ import org.powermock.core.classloader.annotations.MockPolicy;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.reflect.Whitebox;
+import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.Scheduler;
 import org.quartz.Trigger;
@@ -198,7 +199,7 @@ public class PDFCManagerJobTest {
 		
 		PDFCManagerJob job = new PDFCManagerJob();
 		job.setInstanceDate(instanceDate);
-		Whitebox.invokeMethod(job, "updateInstanceDate");
+		Whitebox.invokeMethod(job, "updateInstanceDate", new JobDataMap());
 		assertEquals(instanceDate, Whitebox.getInternalState(job, "instanceDate"));
 	}
 	
@@ -210,7 +211,31 @@ public class PDFCManagerJobTest {
 		
 		PDFCManagerJob job = new PDFCManagerJob();
 		job.setInstanceDate(instanceDate);
-		Whitebox.invokeMethod(job, "updateInstanceDate");
+		Whitebox.invokeMethod(job, "updateInstanceDate", new JobDataMap());
 		assertEquals(DateUtils.addHours(instanceDate, 1), Whitebox.getInternalState(job, "instanceDate"));
+	}
+	@Test
+	public void shoulUpdateInstanceDateIfMoreThanOneHourHasPassed2() throws Exception {
+		Date instanceDate = DateUtils.parseDate("05/07/15 11:49:30", DATE_PATTERN);
+		Date now = DateUtils.parseDate("06/07/15 07:51:33", DATE_PATTERN);
+		whenNew(Date.class).withNoArguments().thenReturn(now);
+		
+		Date expected = DateUtils.parseDate("06/07/15 07:49:30", DATE_PATTERN);
+		PDFCManagerJob job = new PDFCManagerJob();
+		job.setInstanceDate(instanceDate);
+		Whitebox.invokeMethod(job, "updateInstanceDate", new JobDataMap());
+		assertEquals(expected, Whitebox.getInternalState(job, "instanceDate"));
+	}
+	@Test
+	public void shoulUpdateInstanceDateIfMoreThanOneHourHasPassed3() throws Exception {
+		Date instanceDate = DateUtils.parseDate("05/07/15 14:50:30", DATE_PATTERN);
+		Date now = DateUtils.parseDate("05/07/15 16:14:33", DATE_PATTERN);
+		whenNew(Date.class).withNoArguments().thenReturn(now);
+		
+		Date expected = DateUtils.parseDate("05/07/15 15:50:30", DATE_PATTERN);
+		PDFCManagerJob job = new PDFCManagerJob();
+		job.setInstanceDate(instanceDate);
+		Whitebox.invokeMethod(job, "updateInstanceDate", new JobDataMap());
+		assertEquals(expected, Whitebox.getInternalState(job, "instanceDate"));
 	}
 }

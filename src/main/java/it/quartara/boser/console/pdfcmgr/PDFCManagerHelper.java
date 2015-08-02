@@ -19,6 +19,7 @@ import org.quartz.JobDetail;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.SchedulerFactory;
+import org.quartz.SimpleTrigger;
 import org.quartz.Trigger;
 import org.quartz.DateBuilder.IntervalUnit;
 import org.quartz.ee.servlet.QuartzInitializerListener;
@@ -31,6 +32,7 @@ public class PDFCManagerHelper {
 	private static final Logger log = LoggerFactory.getLogger(PDFCManagerHelper.class);
 	
 	private static final String SELECT_STANDBY_INTERVAL = "select VALUE from PARAMETERS where id = 'STANDBY_INTERVAL'";
+	private static final String SELECT_INSTANCEID = "select VALUE from PARAMETERS where id = 'INSTANCE_ID'";
 	
 	public static short getStandbyInterval(Connection conn) throws SQLException {
 		short standbyInterval = -1;
@@ -48,7 +50,9 @@ public class PDFCManagerHelper {
 	public static void scheduleStandbyJob(DataSource ds, ServletContext servletContext, Date instanceDate, boolean startNow) {
 		short standbyInterval = -1;
 		try {
-			standbyInterval = getStandbyInterval(ds.getConnection());
+			Connection conn = ds.getConnection();
+			standbyInterval = getStandbyInterval(conn);
+			conn.close();
 			if (standbyInterval == -1) {
 				log.error("impossibile schedulare il job di standby automatico");
 				return;
@@ -82,9 +86,9 @@ public class PDFCManagerHelper {
 			Trigger trigger = newTrigger()
 								.withIdentity("PDFCMGRTRG", "BOSERCONSOLE")
 								.withSchedule(simpleSchedule()
+											.withRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY)
 											.withIntervalInSeconds(60)
-											.withMisfireHandlingInstructionNextWithRemainingCount()
-											.repeatForever())
+											.withMisfireHandlingInstructionNextWithRemainingCount())
 								.startAt(futureDate(standbyInterval-1, IntervalUnit.MINUTE))
 								.build();
 		
@@ -93,6 +97,19 @@ public class PDFCManagerHelper {
 		} catch (SchedulerException e) {
 			log.error("scheduler non trovato!!", e);
 		}
+	}
+	
+	public static String getInstanceId(Connection conn) throws SQLException {
+		String instanceId = null;
+		Statement stat = conn.createStatement();
+		ResultSet rs = stat.executeQuery(SELECT_INSTANCEID);
+		if (rs.next()) {
+			instanceId = rs.getString(1);
+			log.debug("instance id: {}", instanceId);
+		} else {
+			log.error("parametro 'INSTANCE_ID' non presente in base dati");
+		}
+		return instanceId;
 	}
 
 }
