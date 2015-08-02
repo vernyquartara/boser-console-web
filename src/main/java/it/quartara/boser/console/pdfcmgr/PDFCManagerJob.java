@@ -53,6 +53,7 @@ public class PDFCManagerJob implements Job {
 	
 	private Date instanceDate;
 	private DataSource ds;
+	private DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, Locale.ITALY);
 
 	/*
 	 * Il metodo deve essere transazionale SERIALIZZATO sulle conversioni,
@@ -64,8 +65,7 @@ public class PDFCManagerJob implements Job {
 	 */
 	@Override
 	public void execute(JobExecutionContext context) throws JobExecutionException {
-		log.debug("executing, instanceDate: {}", 
-				DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, Locale.ITALY).format(instanceDate));
+		log.debug("executing, instanceDate: {}", dateFormat.format(instanceDate));
 		String instanceId;
 		try {
 			Connection conn = ds.getConnection();
@@ -194,8 +194,7 @@ public class PDFCManagerJob implements Job {
 		}
 		if (counter>0) {
 			instanceDate = DateUtils.addHours(instanceDate, counter);
-			log.info("updating instanceDate to {}", 
-					DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, Locale.ITALY).format(instanceDate));
+			log.info("updating instanceDate to {}", dateFormat.format(instanceDate));
 			jobDataMap.put(PDFCManagerJob.INSTANCE_DATE_KEY, instanceDate);
 		}
 	}
@@ -235,12 +234,11 @@ public class PDFCManagerJob implements Job {
 			ResultSet rs = stat.executeQuery(SELECT_LAST_CONVERTION_DATE);
 			if (rs.next()) {
 				lastConversionDate = new Date(rs.getTimestamp(1).getTime());
-				log.info("data ultima conversione effettuata: {}", 
-						 DateFormat.getDateTimeInstance().format(lastConversionDate));
+				log.info("data ultima conversione effettuata: {}", dateFormat.format(lastConversionDate));
 			} else {
 				lastConversionDate = DateUtils.addDays(new Date(), -1);
 				log.warn("non sono presenti conversioni effettuate in base dati,"
-						+ "si considera la data di ieri ({})", lastConversionDate);
+						+ "si considera la data di ieri ({})", dateFormat.format(lastConversionDate));
 			}
 		} catch (SQLException e) {
 			log.error("errore di lettura dal db", e);
@@ -252,9 +250,9 @@ public class PDFCManagerJob implements Job {
 	private boolean isTimeToStandby(Date instanceDate, Date lastConversionDate, short interval) {
 		log.debug("checking if it's time to standby...");
 		Date now = new Date();
-		log.debug("instance date: {}", DateFormat.getDateTimeInstance().format(instanceDate));
-		log.debug("last conversion date: {}", DateFormat.getDateTimeInstance().format(lastConversionDate));
-		log.debug("current date: {}", DateFormat.getDateTimeInstance().format(now));
+		log.debug("instance date: {}", dateFormat.format(instanceDate));
+		log.debug("last conversion date: {}", dateFormat.format(lastConversionDate));
+		log.debug("current date: {}", dateFormat.format(now));
 		log.debug("standby after: {} minutes", interval);
 		if (now.after(DateUtils.addMinutes(lastConversionDate, interval))
 				&& now.after(DateUtils.addMinutes(instanceDate, interval))) {
