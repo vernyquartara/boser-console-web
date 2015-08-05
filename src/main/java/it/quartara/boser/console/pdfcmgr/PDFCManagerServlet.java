@@ -41,6 +41,7 @@ public class PDFCManagerServlet extends HttpServlet {
 	 */
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		log.info("controllo status, richiesta da IP {}", req.getRemoteAddr());
         AmazonEC2 ec2 = AWSHelper.createAmazonEC2Client(AWSHelper.CREDENTIALS_PROFILE);
         String instanceId;
 		try {
@@ -93,6 +94,7 @@ public class PDFCManagerServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
+		log.info("richiesta di avvio da IP {}", req.getRemoteAddr());
 		String instanceId;
 		try {
 			Connection conn = ds.getConnection();
