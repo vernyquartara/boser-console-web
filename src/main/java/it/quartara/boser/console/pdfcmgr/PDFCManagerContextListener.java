@@ -27,7 +27,7 @@ public class PDFCManagerContextListener implements ServletContextListener {
 	
 	private static final Logger log = LoggerFactory.getLogger(PDFCManagerContextListener.class);
 	
-	@Resource(name="jdbc/BoserDS")
+	@Resource(lookup="java:/jdbc/BoserDS")
 	private DataSource ds;
 
 	@Override

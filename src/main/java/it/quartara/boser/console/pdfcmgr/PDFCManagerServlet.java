@@ -30,7 +30,7 @@ public class PDFCManagerServlet extends HttpServlet {
 	
 	private static final String TARGET_URL = "http://boser.quartara.it/conversionHome";
 	
-	@Resource(name="jdbc/BoserDS")
+	@Resource(lookup="java:/jdbc/BoserDS")
 	private DataSource ds;
 	
 	/*
