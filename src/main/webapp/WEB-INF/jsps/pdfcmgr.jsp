@@ -24,7 +24,7 @@
 		</form>
 	</c:if>
 	<c:if test="${running}">
-		<p><a href="http://boser.quartara.it/conversionHome">Accedi</a></p>
+		<p><a href="http://boser-converter.quartara.it/conversionHome">Accedi</a></p>
 	</c:if>
 </div>
 </body>
