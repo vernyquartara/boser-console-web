@@ -15,7 +15,7 @@
 	</listener>
 	
 	<welcome-file-list>
-		<welcome-file>pdfcmgr</welcome-file>
+		<welcome-file>home</welcome-file>
 	</welcome-file-list>
 
 	<!-- <security-constraint>

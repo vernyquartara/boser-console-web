@@ -42,6 +42,8 @@ import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceState;
 import com.amazonaws.services.ec2.model.StopInstancesRequest;
 
+import it.quartara.boser.console.AWSHelper;
+
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({PDFCManagerJob.class, AWSHelper.class, PDFCManagerHelper.class})
 @MockPolicy(Slf4jMockPolicy.class)

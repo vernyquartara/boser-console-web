@@ -1,4 +1,4 @@
-package it.quartara.boser.console.pdfcmgr;
+package it.quartara.boser.console;
 
 import java.util.ArrayList;
 import java.util.List;

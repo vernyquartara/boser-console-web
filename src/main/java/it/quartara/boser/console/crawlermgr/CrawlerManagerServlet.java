@@ -1,4 +1,4 @@
-package it.quartara.boser.console.pdfcmgr;
+package it.quartara.boser.console.crawlermgr;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -23,14 +23,14 @@ import com.amazonaws.services.ec2.model.StartInstancesRequest;
 
 import it.quartara.boser.console.AWSHelper;
 
-@WebServlet("/converter")
-public class PDFCManagerServlet extends HttpServlet {
+@WebServlet("/crawler")
+public class CrawlerManagerServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 617434256201619156L;
 	
-	private static final Logger log = LoggerFactory.getLogger(PDFCManagerServlet.class);
+	private static final Logger log = LoggerFactory.getLogger(CrawlerManagerServlet.class);
 	
-	private static final String TARGET_URL = "http://boser.quartara.it/conversionHome";
+	private static final String TARGET_URL = "http://boser.quartara.it/";
 	
 	@Resource(lookup="java:/jdbc/BoserDS")
 	private DataSource ds;
@@ -46,10 +46,11 @@ public class PDFCManagerServlet extends HttpServlet {
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
 		log.info("richiesta di avvio da IP {}", req.getRemoteAddr());
-		String instanceId;
+		String crawlerInstanceId, solrInstanceId;
 		try {
 			Connection conn = ds.getConnection();
-			instanceId = PDFCManagerHelper.getInstanceId(conn);
+			crawlerInstanceId = CrawlerManagerHelper.getCrawlerInstanceId(conn);
+			solrInstanceId = CrawlerManagerHelper.getSolrInstanceId(conn);
 			conn.close();
 		} catch (SQLException e) {
 			log.error("instance id non trovato, controllo remoto non disponibile", e);
@@ -63,15 +64,25 @@ public class PDFCManagerServlet extends HttpServlet {
 		 */
 		AmazonEC2 ec2 = AWSHelper.createAmazonEC2Client(AWSHelper.CREDENTIALS_PROFILE);
         try {
-        	Instance instance = AWSHelper.getInstance(ec2, instanceId);
-        	if (instance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
+        	Instance crawlerInstance = AWSHelper.getInstance(ec2, crawlerInstanceId);
+        	if (crawlerInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
         		resp.sendRedirect(TARGET_URL);
         		return;
         	}
         	StartInstancesRequest startInstancesRequest = new StartInstancesRequest();
-        	startInstancesRequest.withInstanceIds(instanceId);
+        	startInstancesRequest.withInstanceIds(crawlerInstanceId);
         	ec2.startInstances(startInstancesRequest);
-        	log.debug("start request submitted");
+        	log.debug("crawler start request submitted");
+        	
+        	Instance solrInstance = AWSHelper.getInstance(ec2, solrInstanceId);
+        	if (solrInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
+        		resp.sendRedirect(TARGET_URL);
+        		return;
+        	}
+        	startInstancesRequest = new StartInstancesRequest();
+        	startInstancesRequest.withInstanceIds(solrInstanceId);
+        	ec2.startInstances(startInstancesRequest);
+        	log.debug("solr start request submitted");
         	
         	boolean running = false;
         	do {
@@ -81,27 +92,29 @@ public class PDFCManagerServlet extends HttpServlet {
 					//nop
 				}
         		log.debug("checking status...");
-        		instance = AWSHelper.getInstance(ec2, instanceId);
-        		if (instance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
+        		crawlerInstance = AWSHelper.getInstance(ec2, crawlerInstanceId);
+        		solrInstance = AWSHelper.getInstance(ec2, solrInstanceId);
+        		if (crawlerInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())
+        				&& solrInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
         			running = true;
-        			log.debug("instance's running. lauch time: {}", instance.getLaunchTime());
+        			log.debug("instances are running. lauch time: {}(crawler), {}(solr)", crawlerInstance.getLaunchTime(), solrInstance.getLaunchTime());
         		}
         	} while (!running);
         	/*
         	 * schedulazione job per lo standby automatico
         	 */
-        	PDFCManagerHelper.scheduleStandbyJob(ds, getServletContext(), instance.getLaunchTime(), false);
+        	CrawlerManagerHelper.scheduleStandbyJob(ds, getServletContext(), crawlerInstance.getLaunchTime(), false);
         	/*
-        	 * attendo 25 secondi prima di restituire il controllo all'utente
+        	 * attendo 40 secondi prima di restituire il controllo all'utente
         	 * per essere sicuro che Tomcat sia avviato
         	 */
         	try {
-				Thread.sleep(25000);
+				Thread.sleep(40000);
 			} catch (InterruptedException e) {
 				//nop
 			}
-        	req.setAttribute("converterStatus", "operativo");
-        	req.setAttribute("converterRunning", true);
+        	req.setAttribute("crawlerStatus", "operativo");
+        	req.setAttribute("crawlerRunning", true);
         	RequestDispatcher rd = req.getRequestDispatcher("/WEB-INF/jsps/home.jsp");
     		rd.forward(req, resp);
         } catch (AmazonServiceException ase) {

@@ -1,4 +1,4 @@
-package it.quartara.boser.console.pdfcmgr;
+package it.quartara.boser.console.crawlermgr;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -45,13 +45,13 @@ import it.quartara.boser.console.AWSHelper;
  */
 @DisallowConcurrentExecution
 @PersistJobDataAfterExecution
-public class PDFCManagerJob implements Job {
+public class CrawlerManagerJob implements Job {
 	
-	private static final Logger log = LoggerFactory.getLogger(PDFCManagerJob.class);
+	private static final Logger log = LoggerFactory.getLogger(CrawlerManagerJob.class);
 	
 	public static final String INSTANCE_DATE_KEY = "instanceDate";
-	public static final String SELECT_RUNNING_CONVERTIONS = "SELECT ID FROM PDF_CONVERTIONS where STATE in ('READY','STARTED')";
-	public static final String SELECT_LAST_CONVERTION_DATE = "select max(ENDDATE) from PDF_CONVERTIONS";
+	public static final String SELECT_RUNNING_REQUESTS = "SELECT ID FROM ASYNC_REQUESTS where STATE in ('READY','STARTED')";
+	public static final String SELECT_LAST_REQUEST_DATE = "select max(lastupdate) from ASYNC_REQUESTS";
 	
 	private Date instanceDate;
 	private DataSource ds;
@@ -68,24 +68,27 @@ public class PDFCManagerJob implements Job {
 	@Override
 	public void execute(JobExecutionContext context) throws JobExecutionException {
 		log.debug("executing, instanceDate: {}", dateFormat.format(instanceDate));
-		String instanceId;
+		String crawlerInstanceId, solrInstanceId;
 		try {
 			Connection conn = ds.getConnection();
-			instanceId = PDFCManagerHelper.getInstanceId(conn);
+			crawlerInstanceId = CrawlerManagerHelper.getCrawlerInstanceId(conn);
+			solrInstanceId = CrawlerManagerHelper.getSolrInstanceId(conn);
 			conn.close();
 		} catch (SQLException e) {
 			log.error("instance id non trovato, controllo remoto non disponibile");
 			throw new JobExecutionException(e);
 		} 
 		AmazonEC2 ec2 = AWSHelper.createAmazonEC2Client(AWSHelper.CREDENTIALS_PROFILE);
-		Instance instance = AWSHelper.getInstance(ec2, instanceId);
+		Instance crawlerInstance = AWSHelper.getInstance(ec2, crawlerInstanceId);
+		Instance solrInstance = AWSHelper.getInstance(ec2, crawlerInstanceId);
 		
 		updateInstanceDate(context.getJobDetail().getJobDataMap());
 		/*
 		 * se l'istanza è già stoppata, non ha più senso eseguire il job, si deschedula
 		 */
-    	if (instance.getState().getName().equalsIgnoreCase(InstanceStateName.Stopped.toString())) {
-    		log.info("istanza già stoppata, si deschedula il job");
+    	if (crawlerInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Stopped.toString())
+    			&& solrInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Stopped.toString())) {
+    		log.info("istanze già stoppate, si deschedula il job");
     		try {
 				context.getScheduler().unscheduleJob(context.getTrigger().getKey());
 				return;
@@ -94,8 +97,9 @@ public class PDFCManagerJob implements Job {
 				throw new JobExecutionException(e);
 			}
     	}
-    	if (!instance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
-    		String msg = "istanza non stoppata né attiva, si rimanda l'esecuzione";
+    	if (!crawlerInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())
+    			&& !solrInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
+    		String msg = "istanze non stoppate né attiva, si rimanda l'esecuzione";
     		log.error(msg);
     		throw new JobExecutionException(msg);
     	}
@@ -109,7 +113,7 @@ public class PDFCManagerJob implements Job {
 			throw new JobExecutionException(e);
 		}
 		
-    	if (isCurrentlyConverting(conn)) {
+    	if (isCurrentlyExecuting(conn)) {
     		try {
 				conn.commit();
 				conn.close();
@@ -125,7 +129,7 @@ public class PDFCManagerJob implements Job {
 		Date lastConversionDate = getLastConversionDate(conn);
 		short standbyInterval = -1;
 		try {
-			standbyInterval = PDFCManagerHelper.getStandbyInterval(conn);
+			standbyInterval = CrawlerManagerHelper.getStandbyInterval(conn);
 			if (standbyInterval == -1) {
 				log.error("impossibile proseguire, il job sarà deschedulato");
 				context.getScheduler().unscheduleJob(context.getTrigger().getKey());
@@ -156,7 +160,10 @@ public class PDFCManagerJob implements Job {
 		if (isTimeToStandby(instanceDate, lastConversionDate, standbyInterval)) {
 			log.info("stopping instance...");
 			StopInstancesRequest stopInstancesRequest = new StopInstancesRequest();
-			stopInstancesRequest.withInstanceIds(instanceId);
+			stopInstancesRequest.withInstanceIds(crawlerInstanceId);
+			ec2.stopInstances(stopInstancesRequest);
+			stopInstancesRequest = new StopInstancesRequest();
+			stopInstancesRequest.withInstanceIds(solrInstanceId);
 			ec2.stopInstances(stopInstancesRequest);
 			log.info("richiesta di stop inviata. il job sarà deschedulato");
 			try {
@@ -197,7 +204,7 @@ public class PDFCManagerJob implements Job {
 		if (counter>0) {
 			instanceDate = DateUtils.addHours(instanceDate, counter);
 			log.info("updating instanceDate to {}", dateFormat.format(instanceDate));
-			jobDataMap.put(PDFCManagerJob.INSTANCE_DATE_KEY, instanceDate);
+			jobDataMap.put(CrawlerManagerJob.INSTANCE_DATE_KEY, instanceDate);
 		}
 	}
 
@@ -206,11 +213,11 @@ public class PDFCManagerJob implements Job {
 	 * @return true se esistono conversioni in stato READY o STARTED, false altrimenti
 	 * @throws JobExecutionException 
 	 */
-	private boolean isCurrentlyConverting(Connection conn) throws JobExecutionException {
+	private boolean isCurrentlyExecuting(Connection conn) throws JobExecutionException {
 		Statement stat;
 		try {
 			stat = conn.createStatement();
-			ResultSet rs = stat.executeQuery(SELECT_RUNNING_CONVERTIONS);
+			ResultSet rs = stat.executeQuery(SELECT_RUNNING_REQUESTS);
 			if (rs.next()) {
 				log.info("sono presenti conversioni in corso");
 				return true;
@@ -233,13 +240,13 @@ public class PDFCManagerJob implements Job {
 		Date lastConversionDate = null;
 		try {
 			Statement stat = conn.createStatement();
-			ResultSet rs = stat.executeQuery(SELECT_LAST_CONVERTION_DATE);
+			ResultSet rs = stat.executeQuery(SELECT_LAST_REQUEST_DATE);
 			if (rs.next()) {
 				lastConversionDate = new Date(rs.getTimestamp(1).getTime());
-				log.info("data ultima conversione effettuata: {}", dateFormat.format(lastConversionDate));
+				log.info("data ultima richiesta effettuata: {}", dateFormat.format(lastConversionDate));
 			} else {
 				lastConversionDate = DateUtils.addDays(new Date(), -1);
-				log.warn("non sono presenti conversioni effettuate in base dati,"
+				log.warn("non sono presenti richieste effettuate in base dati,"
 						+ "si considera la data di ieri ({})", dateFormat.format(lastConversionDate));
 			}
 		} catch (SQLException e) {

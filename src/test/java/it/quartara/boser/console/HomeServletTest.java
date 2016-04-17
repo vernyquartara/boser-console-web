@@ -1,25 +1,15 @@
-package it.quartara.boser.console.pdfcmgr;
+package it.quartara.boser.console;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 
-import java.util.Date;
-
 import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.sql.DataSource;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,15 +24,13 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceState;
 
-import it.quartara.boser.console.AWSHelper;
-import it.quartara.boser.console.HomeServlet;
 import it.quartara.boser.console.pdfcmgr.PDFCManagerHelper;
 import it.quartara.boser.console.pdfcmgr.PDFCManagerServlet;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({PDFCManagerServlet.class, AWSHelper.class, PDFCManagerHelper.class})
 @MockPolicy(Slf4jMockPolicy.class)
-public class PDFCManagerServletTest {
+public class HomeServletTest {
 
 	@Mock HttpServletRequest request;
 	@Mock HttpServletResponse response;
@@ -52,40 +40,53 @@ public class PDFCManagerServletTest {
 	@Mock InstanceState instanceState;
 	
 	@Test
-	public void testDoPostWhenInstanceIsRunning() throws Exception {
+	public void testDoGetWhenInstanceIsRunning() throws Exception {
+		when(request.getRequestDispatcher("/WEB-INF/jsps/pdfcmgr.jsp")).thenReturn(rd);
 		when(instance.getState()).thenReturn(instanceState);
 		when(instanceState.getName()).thenReturn("running");
+		
+		HomeServlet servlet = spy(new HomeServlet());
 		mockStatic(AWSHelper.class);
 		when(AWSHelper.createAmazonEC2Client(anyString())).thenReturn(ec2);
 		when(AWSHelper.getInstance(eq(ec2), anyString())).thenReturn(instance);
 		
-		PDFCManagerServlet servlet = spy(new PDFCManagerServlet());
-		servlet.doPost(request, response);
+		servlet.doGet(request, response);
 		
-		verify(response).sendRedirect("http://boser.quartara.it/conversionHome");
+		verify(request).setAttribute("status", "operativo");
+		verify(request).setAttribute("running", true);
+		verify(rd).forward(request, response);
 	}
 	
 	@Test
-	public void testDoPostWhenInstanceIsStopped() throws Exception {
+	public void testDoGetWhenInstanceIsStopped() throws Exception {
 		when(request.getRequestDispatcher("/WEB-INF/jsps/pdfcmgr.jsp")).thenReturn(rd);
 		when(instance.getState()).thenReturn(instanceState);
-		when(instanceState.getName()).thenReturn("stopped").thenReturn("pending").thenReturn("running");
-		mockStatic(Thread.class);
-		Thread.sleep(anyLong());
+		when(instanceState.getName()).thenReturn("stopped");
 		mockStatic(AWSHelper.class);
 		when(AWSHelper.createAmazonEC2Client(anyString())).thenReturn(ec2);
 		when(AWSHelper.getInstance(eq(ec2), anyString())).thenReturn(instance);
-		mockStatic(PDFCManagerHelper.class);
-		doNothing().when(PDFCManagerHelper.class, "scheduleStandbyJob", any(DataSource.class), 
-																		any(ServletContext.class), 
-																		any(Date.class),
-																		anyBoolean());
 		
-		PDFCManagerServlet servlet = spy(new PDFCManagerServlet());
-		doReturn(mock(ServletContext.class)).when(servlet).getServletContext();
+		HomeServlet servlet = spy(new HomeServlet());
+		servlet.doGet(request, response);
 		
-		servlet.doPost(request, response);
+		verify(request).setAttribute("status", "in stand-by");
+		verify(request).setAttribute("running", false);
+		verify(rd).forward(request, response);
 	}
+	
+	@Test
+	public void testDoGetFailure() throws Exception {
+		when(request.getRequestDispatcher("/WEB-INF/jsps/pdfcmgrerror.jsp")).thenReturn(rd);
+		mockStatic(AWSHelper.class);
+		when(AWSHelper.createAmazonEC2Client(anyString())).thenReturn(ec2);
+		when(AWSHelper.getInstance(eq(ec2), anyString())).thenThrow(new AmazonServiceException(""));
+		
+		HomeServlet servlet = spy(new HomeServlet());
+		servlet.doGet(request, response);
+		
+		verify(rd).forward(request, response);
+	}
+	
 	
 }
 
