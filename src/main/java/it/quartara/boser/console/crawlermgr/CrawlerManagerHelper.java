@@ -92,9 +92,8 @@ public class CrawlerManagerHelper {
 											.withMisfireHandlingInstructionNextWithRemainingCount())
 								.startAt(futureDate(standbyInterval-1, IntervalUnit.MINUTE))
 								.build();
-		
 			scheduler.scheduleJob(jobDetail, trigger);
-			log.info("job schedulato");
+			log.info("job schedulato per l'avvio tra {} minuti", standbyInterval);
 		} catch (SchedulerException e) {
 			log.error("scheduler non trovato!!", e);
 		}

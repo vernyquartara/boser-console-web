@@ -67,7 +67,7 @@ public class CrawlerManagerJob implements Job {
 	 */
 	@Override
 	public void execute(JobExecutionContext context) throws JobExecutionException {
-		log.debug("executing, instanceDate: {}", dateFormat.format(instanceDate));
+		log.debug("avvio esecuzione, instanceDate: {}", dateFormat.format(instanceDate));
 		String crawlerInstanceId, solrInstanceId;
 		try {
 			Connection conn = ds.getConnection();
@@ -99,7 +99,7 @@ public class CrawlerManagerJob implements Job {
     	}
     	if (!crawlerInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())
     			&& !solrInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
-    		String msg = "istanze non stoppate né attiva, si rimanda l'esecuzione";
+    		String msg = "istanze non stoppate né attive, si rimanda l'esecuzione";
     		log.error(msg);
     		throw new JobExecutionException(msg);
     	}
@@ -214,15 +214,16 @@ public class CrawlerManagerJob implements Job {
 	 * @throws JobExecutionException 
 	 */
 	private boolean isCurrentlyExecuting(Connection conn) throws JobExecutionException {
+		log.debug("controllo esecuzioni in corso");
 		Statement stat;
 		try {
 			stat = conn.createStatement();
 			ResultSet rs = stat.executeQuery(SELECT_RUNNING_REQUESTS);
 			if (rs.next()) {
-				log.info("sono presenti conversioni in corso");
+				log.info("sono presenti esecuzioni in corso (id {})", rs.getLong(1));
 				return true;
 			} else {
-				log.info("nessuna conversione in corso");
+				log.info("nessuna esecuzione in corso");
 			}
 		} catch (SQLException e) {
 			log.error("errore di lettura dal db", e);
