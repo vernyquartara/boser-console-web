@@ -24,7 +24,7 @@ import it.quartara.boser.console.AWSHelper;
  * @author webny
  *
  */
-@WebListener
+//@WebListener
 public class PDFCManagerContextListener implements ServletContextListener {
 	
 	private static final Logger log = LoggerFactory.getLogger(PDFCManagerContextListener.class);

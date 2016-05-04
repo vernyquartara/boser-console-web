@@ -15,7 +15,8 @@
 	</listener>
 	
 	<welcome-file-list>
-		<welcome-file>home</welcome-file>
+		<!-- <welcome-file>home</welcome-file> -->
+		<welcome-file>index.jsp</welcome-file>
 	</welcome-file-list>
 
 	<!-- <security-constraint>
