@@ -2,6 +2,7 @@ package it.quartara.boser.console.service;
 
 import javax.ejb.Stateless;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
@@ -30,10 +31,27 @@ public class CrawlerService {
 	public InstanceDTO getCrawlerInstance() {
 		InstanceDTO instance = new InstanceDTO();
 		instance.setInstanceId("ijoiji");
+		instance.setState("stopped");
+		instance.setPublicDNSName("dns");
+		return instance;
+	}
+	
+	@POST
+	@Path("/start")
+	@Produces("application/json")
+	public InstanceDTO startInstance() {
+		
+    	try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e) {
+			//nop
+		}
+		
+		InstanceDTO instance = new InstanceDTO();
+		instance.setInstanceId("ijoiji");
 		instance.setState("started");
 		instance.setPublicDNSName("dns");
 		return instance;
-		
 	}
 
 }

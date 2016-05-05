@@ -2,25 +2,38 @@
 	pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
 
-<div class="row">
+<div class="row starting-panel" ng-show="crawlerStarting">
 	<div class="col-md-6 col-md-offset-3">
-		<div class="panel panel-success">
-			<div class="panel-heading">Il crawler &egrave; <strong>attivo</strong></div>
+		<div class="panel panel-primary">
+			<div class="panel-heading">Il crawler &egrave; <strong>in fase di avvio</strong></div>
 			<div class="panel-body">
-				<button type="button" class="btn btn-success btn-block">
-					Clicca per accedere  <span class="badge"><span class="glyphicon glyphicon-share-alt"></span></span>
-				</button>
+				<div id="loading-bar-container"></div>
 			</div>
 		</div>
 	</div>
 </div>
 
-<div class="row">
+<div class="row active-panel" ng-show="crawler.state == 'started'">
+	<div class="col-md-6 col-md-offset-3">
+		<div class="panel panel-success">
+			<div class="panel-heading">Il crawler &egrave; <strong>attivo</strong></div>
+			<div class="panel-body">
+				<div>
+					<button type="button" class="btn btn-success btn-block">
+						Clicca per accedere  <span class="badge"><span class="glyphicon glyphicon-share-alt"></span></span>
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row standby-panel" ng-show="crawler.state == 'stopped'">
 	<div class="col-md-6 col-md-offset-3">
 		<div class="panel panel-warning">
 			<div class="panel-heading">Il crawler &egrave; <strong>in stand-by</strong></div>
 			<div class="panel-body">
-				<button type="button" class="btn btn-warning btn-block">
+				<button type="button" class="btn btn-warning btn-block" ng-click="startInstance()" ng-disabled="startBtnDisabled">
 					Clicca per avviare  <span class="badge"><span class="glyphicon glyphicon-play"></span></span>
 				</button>
 			</div>
@@ -28,21 +41,7 @@
 	</div>
 </div>
 
-<div class="row">
-	<div class="col-md-6 col-md-offset-3">
-		<div class="panel panel-primary">
-			<div class="panel-heading">Il crawler &egrave; <strong>in fase di avvio</strong></div>
-			<div class="panel-body">
-				<div class="progress">
-					<div class="progress-bar" role="progressbar" aria-valuenow="60"
-						aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
-						<span class="sr-only">60% Complete</span>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-</div>
+
 
 
 <div class="row">

@@ -1,3 +1,39 @@
 .submenu {
 	margin-bottom: 20px;
 }
+
+.ng-hide-add, .ng-hide-remove {
+    /* ensure visibility during the transition */
+    display: block !important; /* yes, important */
+    /* this is required as of 1.3x to properly
+     apply all styling in a show/hide animation */
+  	transition: 0s linear all;
+}
+
+/*
+animazione di uscita: .ng-hide-add
+animazione di entrata: .ng-hide-remove
+*/
+
+.starting-panel.ng-hide-add {
+  animation: fadeOut 0.5s;
+}
+.starting-panel.ng-hide-remove {
+  animation: fadeIn 3s ease;
+}
+
+
+.active-panel.ng-hide-add {
+  animation: fadeOut 0.2s;
+}
+.active-panel.ng-hide-remove {
+  animation: slideInUp 0.6s ease;
+}
+
+
+.standby-panel.ng-hide-add {
+  animation: slideOutDown 0.6s;
+}
+.standby-panel.ng-hide-remove {
+  animation: fadeIn 0.2s;
+}

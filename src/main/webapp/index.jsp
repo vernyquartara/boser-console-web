@@ -8,11 +8,18 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	
-	<link rel="stylesheet" href="style/bootstrap.css">
-	<link rel="stylesheet" href="style/boser.css">
-	<script type="text/javascript" src="<c:url value="/script/angular.js"/>"></script>
-	<script type="text/javascript" src="<c:url value="/script/i18n/angular-locale_it-it.js"/>"></script>
-	<script type="text/javascript" src="<c:url value="/script/angular-route.js"/>"></script>
+	<!--
+		https://github.com/chieffancypants/angular-loading-bar 
+	-->
+	
+	<link rel="stylesheet" href="style/bootstrap.css" type='text/css' media='all'>
+	<link rel="stylesheet" href="style/boser.css" type='text/css' media='all'>
+	<link rel="stylesheet" href="style/animate.css" type='text/css' media='all'>
+	<link rel='stylesheet' href='//cdnjs.cloudflare.com/ajax/libs/angular-loading-bar/0.9.0/loading-bar.min.css' type='text/css' media='all' />
+	
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
+	<script type="text/javascript" src="https://code.angularjs.org/1.5.5/i18n/angular-locale_it-it.js"></script>
+	<script type="text/javascript" src="https://code.angularjs.org/1.5.5/angular-route.min.js"></script>
 	<script type="text/javascript" src="<c:url value="/script/boser-app.js"/>"></script>
 	<script type="text/javascript" src="<c:url value="/script/boser-routes.js"/>"></script>
 	<script type="text/javascript" src="<c:url value="/script/crawler/crawlerCtrl.js"/>"></script>
@@ -21,6 +28,8 @@
 	
 	<script type="text/javascript" src="<c:url value="/script/angular-strap.js"/>"></script>
 	<script type="text/javascript" src="<c:url value="/script/angular-strap.tpl.js"/>"></script>
+	<script type="text/javascript" src="https://code.angularjs.org/1.5.5/angular-animate.min.js"></script>
+	<script type='text/javascript' src='//cdnjs.cloudflare.com/ajax/libs/angular-loading-bar/0.9.0/loading-bar.min.js'></script>
 </head>
 
 <body>
