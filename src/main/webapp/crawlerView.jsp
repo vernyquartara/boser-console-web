@@ -13,13 +13,13 @@
 	</div>
 </div>
 
-<div class="row active-panel" ng-show="crawler.state == 'started'">
+<div class="row active-panel" ng-show="crawler.state == 'running'">
 	<div class="col-md-6 col-md-offset-3">
 		<div class="panel panel-success">
 			<div class="panel-heading">Il crawler &egrave; <strong>attivo</strong></div>
 			<div class="panel-body">
 				<div>
-					<button type="button" class="btn btn-success btn-block">
+					<button type="button" class="btn btn-success btn-block" >
 						Clicca per accedere  <span class="badge"><span class="glyphicon glyphicon-share-alt"></span></span>
 					</button>
 				</div>
@@ -48,7 +48,7 @@
 	<div class="col-md-6 col-md-offset-3">
 		<ul class="list-group">
 			<li class="list-group-item list-group-item-info">Info e	statistiche</li>
-			<li class="list-group-item">URL: http://ec2-52-58-70-245.eu-central-1.compute.amazonaws.com</li>
+			<li class="list-group-item">Crawler URL: http://{{crawler.publicDNSName}}</li>
 			<li class="list-group-item">Ultimo avvio: 16-05-2014</li>
 			<li class="list-group-item">Ultimo stand-by: 16-05-2014</li>
 			<li class="list-group-item">Ore di attivit&agrave; mese corrente: 14</li>

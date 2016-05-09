@@ -23,8 +23,7 @@
 	<script type="text/javascript" src="<c:url value="/script/boser-app.js"/>"></script>
 	<script type="text/javascript" src="<c:url value="/script/boser-routes.js"/>"></script>
 	<script type="text/javascript" src="<c:url value="/script/crawler/crawlerCtrl.js"/>"></script>
-	<script type="text/javascript" src="<c:url value="/script/search/searchSrv.js"/>"></script>
-	<script type="text/javascript" src="<c:url value="/script/search/searchCtrl.js"/>"></script>
+	<script type="text/javascript" src="<c:url value="/script/converter/converterCtrl.js"/>"></script>
 	
 	<script type="text/javascript" src="<c:url value="/script/angular-strap.js"/>"></script>
 	<script type="text/javascript" src="<c:url value="/script/angular-strap.tpl.js"/>"></script>

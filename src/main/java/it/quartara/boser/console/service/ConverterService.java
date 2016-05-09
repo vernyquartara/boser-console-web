@@ -15,7 +15,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 
 import org.apache.http.client.fluent.Request;
-import org.apache.http.conn.HttpHostConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +26,7 @@ import com.amazonaws.services.ec2.model.StartInstancesRequest;
 
 import it.quartara.boser.console.dto.InstanceDTO;
 import it.quartara.boser.console.helper.AWSHelper;
-import it.quartara.boser.console.helper.CrawlerManagerHelper;
+import it.quartara.boser.console.helper.ConverterManagerHelper;
 
 /**
  * servizio REST per
@@ -38,11 +37,11 @@ import it.quartara.boser.console.helper.CrawlerManagerHelper;
  * @author webny
  *
  */
-@Path("/crawler")
+@Path("/converter")
 @Stateless
-public class CrawlerService {
+public class ConverterService {
 	
-	private static final Logger log = LoggerFactory.getLogger(CrawlerService.class);
+	private static final Logger log = LoggerFactory.getLogger(ConverterService.class);
 	
 	@Resource(lookup="java:/jdbc/BoserDS")
 	private DataSource ds;
@@ -57,7 +56,7 @@ public class CrawlerService {
 		Connection conn;
 		try {
 			conn = ds.getConnection();
-			instanceId = CrawlerManagerHelper.getCrawlerInstanceId(conn);
+			instanceId = ConverterManagerHelper.getConverterInstanceId(conn);
 			conn.close();
 		} catch (SQLException e) {
 			throw new WebApplicationException(e);
@@ -82,11 +81,10 @@ public class CrawlerService {
 	@Produces("application/json")
 	public InstanceDTO startInstance() {
 		log.info("richiesta di avvio crawler");
-		String crawlerInstanceId, solrInstanceId;
+		String converterInstanceId;
 		try {
 			Connection conn = ds.getConnection();
-			crawlerInstanceId = CrawlerManagerHelper.getCrawlerInstanceId(conn);
-			solrInstanceId = CrawlerManagerHelper.getSolrInstanceId(conn);
+			converterInstanceId = ConverterManagerHelper.getConverterInstanceId(conn);
 			conn.close();
 		} catch (SQLException e) {
 			throw new WebApplicationException(e);
@@ -97,33 +95,15 @@ public class CrawlerService {
 		 */
 		AmazonEC2 ec2 = AWSHelper.createAmazonEC2Client(AWSHelper.CREDENTIALS_PROFILE);
         try {
-        	Instance crawlerInstance = AWSHelper.getInstance(ec2, crawlerInstanceId);
-        	Instance solrInstance = AWSHelper.getInstance(ec2, solrInstanceId);
+        	Instance converterInstance = AWSHelper.getInstance(ec2, converterInstanceId);
         	
-        	boolean crawlerIsUp = crawlerInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString());
-        	boolean solrIsUp = solrInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString());
+        	boolean converterIsUp = converterInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString());
         	
-        	if (crawlerIsUp && solrIsUp) {
-        		InstanceDTO dto = new InstanceDTO();
-        		dto.setInstanceId(crawlerInstanceId);
-        		dto.setState(crawlerInstance.getState().getName());
-        		dto.setPublicDNSName(crawlerInstance.getPublicDnsName());
-        		dto.getLaunchTime();
-        		return dto;
-        	}
-        	
-        	if (!crawlerIsUp) {
+        	if (!converterIsUp) {
         		StartInstancesRequest startInstancesRequest = new StartInstancesRequest();
-        		startInstancesRequest.withInstanceIds(crawlerInstanceId);
+        		startInstancesRequest.withInstanceIds(converterInstanceId);
         		ec2.startInstances(startInstancesRequest);
         		log.debug("crawler start request submitted");
-        	}
-        	
-        	if (!solrIsUp) {
-        		StartInstancesRequest startInstancesRequest = new StartInstancesRequest();
-        		startInstancesRequest.withInstanceIds(solrInstanceId);
-        		ec2.startInstances(startInstancesRequest);
-        		log.debug("SOLR start request submitted");
         	}
         	
         	boolean running = false;
@@ -134,27 +114,25 @@ public class CrawlerService {
 					//nop
 				}
         		log.debug("checking status...");
-        		crawlerInstance = AWSHelper.getInstance(ec2, crawlerInstanceId);
-        		solrInstance = AWSHelper.getInstance(ec2, solrInstanceId);
-        		if (crawlerInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())
-        				&& solrInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
+        		converterInstance = AWSHelper.getInstance(ec2, converterInstanceId);
+        		if (converterInstance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
         			running = true;
-        			log.debug("instances are running. lauch time: {}(crawler), {}(solr)", crawlerInstance.getLaunchTime(), solrInstance.getLaunchTime());
+        			log.debug("instances are running. lauch time: {}", converterInstance.getLaunchTime());
         		}
         	} while (!running);
         	/*
         	 * schedulazione job per lo standby automatico
         	 */
-        	CrawlerManagerHelper.scheduleStandbyJob(ds, crawlerInstance.getLaunchTime(), false);
+        	ConverterManagerHelper.scheduleStandbyJob(ds, converterInstance.getLaunchTime(), false);
         	/*
         	 * controllo che le macchine siano raggiungibili
         	 */
-        	checkInstanceAvailability(crawlerInstance.getPublicDnsName(), solrInstance.getPublicDnsName());
+        	checkInstanceAvailability(converterInstance.getPublicDnsName());
         	
         	InstanceDTO dto = new InstanceDTO();
-    		dto.setInstanceId(crawlerInstanceId);
-    		dto.setState(crawlerInstance.getState().getName());
-    		dto.setPublicDNSName(crawlerInstance.getPublicDnsName());
+    		dto.setInstanceId(converterInstanceId);
+    		dto.setState(converterInstance.getState().getName());
+    		dto.setPublicDNSName(converterInstance.getPublicDnsName());
     		dto.getLaunchTime();
     		return dto;
         } catch (AmazonServiceException ase) {
@@ -170,12 +148,10 @@ public class CrawlerService {
 	 * Ogni n secondi invia una richiesta per controllare la raggiungiilità dei servizi.
 	 * Si basa sul codice di stato HTTP.
 	 */
-	private void checkInstanceAvailability(String crawlerDNSName, String solrDNSName) throws IOException {
-//		Request crawlerRequest = Request.Get("http://"+crawlerDNSName+":8080");
-		Request crawlerRequest = Request.Get("http://boser.quartara.it");
-		Request solrRequest = Request.Get("http://"+solrDNSName+":8983/solr");
+	private void checkInstanceAvailability(String converterDNSName) throws IOException {
+		Request request = Request.Get("http://"+converterDNSName);
 		
-		boolean crawlerAvailable = false, solrAvailable = false;
+		boolean available = false;
     	do {
     		try {
 				Thread.sleep(3000);
@@ -184,21 +160,11 @@ public class CrawlerService {
 			}
     		log.debug("checking availability...");
     		
-    		try {
-	    		crawlerAvailable = 
-	    				HttpServletResponse.SC_UNAUTHORIZED ==
-	    				crawlerRequest.execute().returnResponse().getStatusLine().getStatusCode();
-	    		
-	    		solrAvailable =
-	    				HttpServletResponse.SC_OK ==
-	    				solrRequest.execute().returnResponse().getStatusLine().getStatusCode();
-    		} catch (HttpHostConnectException e) {
-    			log.debug("unavailable: {}", e.getMessage());
-    			continue;
-    		}
-    		
-    	} while (!crawlerAvailable || !solrAvailable);
-    	log.debug("all available");
+    		available = 
+    				HttpServletResponse.SC_OK ==
+    				request.execute().returnResponse().getStatusLine().getStatusCode();
+    		log.debug("converter available");
+    	} while (!available);
 	}
 	
 }

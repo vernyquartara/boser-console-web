@@ -20,8 +20,9 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 
-import it.quartara.boser.console.crawlermgr.CrawlerManagerHelper;
-import it.quartara.boser.console.pdfcmgr.PDFCManagerHelper;
+import it.quartara.boser.console.helper.AWSHelper;
+import it.quartara.boser.console.helper.ConverterManagerHelper;
+import it.quartara.boser.console.helper.CrawlerManagerHelper;
 
 @WebServlet("/home")
 public class HomeServlet extends HttpServlet {
@@ -106,7 +107,7 @@ public class HomeServlet extends HttpServlet {
 	private boolean converterIsUp(AmazonEC2 ec2) throws SQLException {
 		String instanceId;
 		Connection conn = ds.getConnection();
-		instanceId = PDFCManagerHelper.getInstanceId(conn);
+		instanceId = ConverterManagerHelper.getConverterInstanceId(conn);
 		conn.close();
 
 		Instance instance = AWSHelper.getInstance(ec2, instanceId);

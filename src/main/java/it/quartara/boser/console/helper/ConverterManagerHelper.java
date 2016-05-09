@@ -1,4 +1,4 @@
-package it.quartara.boser.console.crawlermgr;
+package it.quartara.boser.console.helper;
 
 import static org.quartz.DateBuilder.futureDate;
 import static org.quartz.JobBuilder.newJob;
@@ -27,13 +27,14 @@ import org.quartz.impl.StdSchedulerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CrawlerManagerHelper {
+import it.quartara.boser.console.job.ConverterManagerJob;
+
+public class ConverterManagerHelper {
 	
-	private static final Logger log = LoggerFactory.getLogger(CrawlerManagerHelper.class);
+	private static final Logger log = LoggerFactory.getLogger(ConverterManagerHelper.class);
 	
 	private static final String SELECT_STANDBY_INTERVAL = "select VALUE from PARAMETERS where id = 'STANDBY_INTERVAL'";
-	private static final String SELECT_CRAWLER_INSTANCEID = "select VALUE from PARAMETERS where id = 'CRAWLER_INSTANCE_ID'";
-	private static final String SELECT_SOLR_INSTANCEID = "select VALUE from PARAMETERS where id = 'SOLR_INSTANCE_ID'";
+	private static final String SELECT_INSTANCEID = "select VALUE from PARAMETERS where id = 'CONVERTER_INSTANCE_ID'";
 	
 	public static short getStandbyInterval(Connection conn) throws SQLException {
 		short standbyInterval = -1;
@@ -48,7 +49,7 @@ public class CrawlerManagerHelper {
 		return standbyInterval;
 	}
 	
-	public static void scheduleStandbyJob(DataSource ds, ServletContext servletContext, Date instanceDate, boolean startNow) {
+	public static void scheduleStandbyJob(DataSource ds, Date instanceDate, boolean startNow) {
 		short standbyInterval = -1;
 		try {
 			Connection conn = ds.getConnection();
@@ -70,51 +71,38 @@ public class CrawlerManagerHelper {
 			standbyInterval = 1;
 		}
 		
-		SchedulerFactory schedulerFactory = (StdSchedulerFactory) servletContext
-                .getAttribute(QuartzInitializerListener.QUARTZ_FACTORY_KEY);
 		Scheduler scheduler;
 		try {
-			scheduler = schedulerFactory.getScheduler();
+			scheduler = StdSchedulerFactory.getDefaultScheduler();
 			
 			JobDataMap jobDataMap = new JobDataMap();
-			jobDataMap.put(CrawlerManagerJob.INSTANCE_DATE_KEY, instanceDate);
+			jobDataMap.put(ConverterManagerJob.INSTANCE_DATE_KEY, instanceDate);
 			jobDataMap.put("ds", ds);
 			
-			JobDetail jobDetail =  newJob(CrawlerManagerJob.class)
-									.withIdentity("CRWLMGRJOB", "BOSERCONSOLE")
+			JobDetail jobDetail =  newJob(ConverterManagerJob.class)
+									.withIdentity("PDFCMGRJOB", "BOSERCONSOLE")
 									.usingJobData(jobDataMap)
 									.build();
 			Trigger trigger = newTrigger()
-								.withIdentity("CRWLMGRTRG", "BOSERCONSOLE")
+								.withIdentity("PDFCMGRTRG", "BOSERCONSOLE")
 								.withSchedule(simpleSchedule()
 											.withRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY)
 											.withIntervalInSeconds(60)
 											.withMisfireHandlingInstructionNextWithRemainingCount())
 								.startAt(futureDate(standbyInterval-1, IntervalUnit.MINUTE))
 								.build();
+		
 			scheduler.scheduleJob(jobDetail, trigger);
-			log.info("job schedulato per l'avvio tra {} minuti", standbyInterval);
+			log.info("job schedulato");
 		} catch (SchedulerException e) {
 			log.error("scheduler non trovato!!", e);
 		}
 	}
 	
-	public static String getCrawlerInstanceId(Connection conn) throws SQLException {
+	public static String getConverterInstanceId(Connection conn) throws SQLException {
 		String instanceId = null;
 		Statement stat = conn.createStatement();
-		ResultSet rs = stat.executeQuery(SELECT_CRAWLER_INSTANCEID);
-		if (rs.next()) {
-			instanceId = rs.getString(1);
-			log.debug("instance id: {}", instanceId);
-		} else {
-			log.error("parametro 'INSTANCE_ID' non presente in base dati");
-		}
-		return instanceId;
-	}
-	public static String getSolrInstanceId(Connection conn) throws SQLException {
-		String instanceId = null;
-		Statement stat = conn.createStatement();
-		ResultSet rs = stat.executeQuery(SELECT_SOLR_INSTANCEID);
+		ResultSet rs = stat.executeQuery(SELECT_INSTANCEID);
 		if (rs.next()) {
 			instanceId = rs.getString(1);
 			log.debug("instance id: {}", instanceId);

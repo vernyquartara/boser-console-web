@@ -1,4 +1,4 @@
-package it.quartara.boser.console.pdfcmgr;
+package it.quartara.boser.console.listener;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -16,7 +16,8 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 
-import it.quartara.boser.console.AWSHelper;
+import it.quartara.boser.console.helper.AWSHelper;
+import it.quartara.boser.console.helper.CrawlerManagerHelper;
 
 /**
  * Se l'istanza è attiva al momento dell'avvio del contesto,
@@ -24,10 +25,10 @@ import it.quartara.boser.console.AWSHelper;
  * @author webny
  *
  */
-//@WebListener
-public class PDFCManagerContextListener implements ServletContextListener {
+@WebListener
+public class CrawlerManagerContextListener implements ServletContextListener {
 	
-	private static final Logger log = LoggerFactory.getLogger(PDFCManagerContextListener.class);
+	private static final Logger log = LoggerFactory.getLogger(CrawlerManagerContextListener.class);
 	
 	@Resource(lookup="java:/jdbc/BoserDS")
 	private DataSource ds;
@@ -38,7 +39,7 @@ public class PDFCManagerContextListener implements ServletContextListener {
 		String instanceId;
 		try {
 			Connection conn = ds.getConnection();
-			instanceId = PDFCManagerHelper.getInstanceId(conn);
+			instanceId = CrawlerManagerHelper.getCrawlerInstanceId(conn);
 			conn.close();
 		} catch (SQLException e) {
 			log.error("instance id non trovato, controllo remoto non disponibile", e);
@@ -46,7 +47,7 @@ public class PDFCManagerContextListener implements ServletContextListener {
 		}
 		Instance instance = AWSHelper.getInstance(ec2, instanceId);
 		if (instance.getState().getName().equalsIgnoreCase(InstanceStateName.Running.toString())) {
-    		PDFCManagerHelper.scheduleStandbyJob(ds, sce.getServletContext(), instance.getLaunchTime(), true);
+    		CrawlerManagerHelper.scheduleStandbyJob(ds, instance.getLaunchTime(), true);
     	}
 	}
 

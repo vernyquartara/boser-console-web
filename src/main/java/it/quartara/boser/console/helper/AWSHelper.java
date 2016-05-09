@@ -1,4 +1,4 @@
-package it.quartara.boser.console;
+package it.quartara.boser.console.helper;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -42,10 +42,12 @@ import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceState;
 import com.amazonaws.services.ec2.model.StopInstancesRequest;
 
-import it.quartara.boser.console.AWSHelper;
+import it.quartara.boser.console.helper.AWSHelper;
+import it.quartara.boser.console.helper.ConverterManagerHelper;
+import it.quartara.boser.console.job.ConverterManagerJob;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({PDFCManagerJob.class, AWSHelper.class, PDFCManagerHelper.class})
+@PrepareForTest({ConverterManagerJob.class, AWSHelper.class, ConverterManagerHelper.class})
 @MockPolicy(Slf4jMockPolicy.class)
 public class PDFCManagerJobTest {
 	
@@ -76,7 +78,7 @@ public class PDFCManagerJobTest {
 		when(instance.getState()).thenReturn(instanceState);
 		when(instanceState.getName()).thenReturn("running");
 		
-		PDFCManagerJob job = spy(new PDFCManagerJob());
+		ConverterManagerJob job = spy(new ConverterManagerJob());
 		job.setInstanceDate(instanceDate);
 		job.setDs(ds);
 		doReturn(true).when(job, "isCurrentlyConverting", any(Connection.class));
@@ -102,7 +104,7 @@ public class PDFCManagerJobTest {
 		when(rs.getDate(1)).thenReturn(new java.sql.Date(lastConvDate.getTime()));
 		whenNew(Date.class).withNoArguments().thenReturn(now);
 		
-		PDFCManagerJob job = spy(new PDFCManagerJob());
+		ConverterManagerJob job = spy(new ConverterManagerJob());
 		job.setInstanceDate(instanceDate);
 		job.setDs(ds);
 		doReturn(false).when(job, "isCurrentlyConverting", any(Connection.class));
@@ -115,8 +117,8 @@ public class PDFCManagerJobTest {
 		InstanceState instanceState = mock(InstanceState.class);
 		when(instance.getState()).thenReturn(instanceState);
 		when(instanceState.getName()).thenReturn("running");
-		mockStatic(PDFCManagerHelper.class);
-		when(PDFCManagerHelper.getStandbyInterval(any(Connection.class))).thenReturn(standbyInterval);
+		mockStatic(ConverterManagerHelper.class);
+		when(ConverterManagerHelper.getStandbyInterval(any(Connection.class))).thenReturn(standbyInterval);
 		
 		job.execute(context);
 		
@@ -144,10 +146,10 @@ public class PDFCManagerJobTest {
 		when(rs.getDate(1)).thenReturn(new java.sql.Date(lastConvDate.getTime()));
 		whenNew(Date.class).withNoArguments().thenReturn(now);
 		
-		mockStatic(PDFCManagerHelper.class);
-		when(PDFCManagerHelper.getStandbyInterval(any(Connection.class))).thenReturn(standbyInterval);
+		mockStatic(ConverterManagerHelper.class);
+		when(ConverterManagerHelper.getStandbyInterval(any(Connection.class))).thenReturn(standbyInterval);
 		
-		PDFCManagerJob job = spy(new PDFCManagerJob());
+		ConverterManagerJob job = spy(new ConverterManagerJob());
 		job.setInstanceDate(instanceDate);
 		job.setDs(ds);
 		doReturn(false).when(job, "isCurrentlyConverting", any(Connection.class));
@@ -178,10 +180,10 @@ public class PDFCManagerJobTest {
 		when(rs.getDate(1)).thenReturn(new java.sql.Date(lastConvDate.getTime()));
 		whenNew(Date.class).withNoArguments().thenReturn(now);
 		
-		mockStatic(PDFCManagerHelper.class);
-		when(PDFCManagerHelper.getStandbyInterval(any(Connection.class))).thenReturn(standbyInterval);
+		mockStatic(ConverterManagerHelper.class);
+		when(ConverterManagerHelper.getStandbyInterval(any(Connection.class))).thenReturn(standbyInterval);
 		
-		PDFCManagerJob job = spy(new PDFCManagerJob());
+		ConverterManagerJob job = spy(new ConverterManagerJob());
 		job.setInstanceDate(instanceDate);
 		job.setDs(ds);
 		doReturn(false).when(job, "isCurrentlyConverting", any(Connection.class));
@@ -199,7 +201,7 @@ public class PDFCManagerJobTest {
 		Date now = DateUtils.parseDate("05/07/15 12:47:33", DATE_PATTERN);
 		whenNew(Date.class).withNoArguments().thenReturn(now);
 		
-		PDFCManagerJob job = new PDFCManagerJob();
+		ConverterManagerJob job = new ConverterManagerJob();
 		job.setInstanceDate(instanceDate);
 		Whitebox.invokeMethod(job, "updateInstanceDate", new JobDataMap());
 		assertEquals(instanceDate, Whitebox.getInternalState(job, "instanceDate"));
@@ -211,7 +213,7 @@ public class PDFCManagerJobTest {
 		Date now = DateUtils.parseDate("05/07/15 12:51:33", DATE_PATTERN);
 		whenNew(Date.class).withNoArguments().thenReturn(now);
 		
-		PDFCManagerJob job = new PDFCManagerJob();
+		ConverterManagerJob job = new ConverterManagerJob();
 		job.setInstanceDate(instanceDate);
 		Whitebox.invokeMethod(job, "updateInstanceDate", new JobDataMap());
 		assertEquals(DateUtils.addHours(instanceDate, 1), Whitebox.getInternalState(job, "instanceDate"));
@@ -223,7 +225,7 @@ public class PDFCManagerJobTest {
 		whenNew(Date.class).withNoArguments().thenReturn(now);
 		
 		Date expected = DateUtils.parseDate("06/07/15 07:49:30", DATE_PATTERN);
-		PDFCManagerJob job = new PDFCManagerJob();
+		ConverterManagerJob job = new ConverterManagerJob();
 		job.setInstanceDate(instanceDate);
 		Whitebox.invokeMethod(job, "updateInstanceDate", new JobDataMap());
 		assertEquals(expected, Whitebox.getInternalState(job, "instanceDate"));
@@ -235,7 +237,7 @@ public class PDFCManagerJobTest {
 		whenNew(Date.class).withNoArguments().thenReturn(now);
 		
 		Date expected = DateUtils.parseDate("05/07/15 15:50:30", DATE_PATTERN);
-		PDFCManagerJob job = new PDFCManagerJob();
+		ConverterManagerJob job = new ConverterManagerJob();
 		job.setInstanceDate(instanceDate);
 		Whitebox.invokeMethod(job, "updateInstanceDate", new JobDataMap());
 		assertEquals(expected, Whitebox.getInternalState(job, "instanceDate"));

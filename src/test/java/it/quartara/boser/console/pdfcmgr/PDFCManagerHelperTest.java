@@ -24,6 +24,9 @@ import org.quartz.Trigger;
 import org.quartz.ee.servlet.QuartzInitializerListener;
 import org.quartz.impl.StdSchedulerFactory;
 
+import it.quartara.boser.console.helper.ConverterManagerHelper;
+import it.quartara.boser.console.job.ConverterManagerJob;
+
 public class PDFCManagerHelperTest {
 	
 
@@ -46,14 +49,14 @@ public class PDFCManagerHelperTest {
 		when(context.getAttribute(QuartzInitializerListener.QUARTZ_FACTORY_KEY)).thenReturn(schedulerFactory);
 		when(schedulerFactory.getScheduler()).thenReturn(scheduler);
 		
-		PDFCManagerHelper.scheduleStandbyJob(ds, context, instanceDate, true);
+		ConverterManagerHelper.scheduleStandbyJob(ds, instanceDate, true);
 		
 		ArgumentCaptor<JobDetail> jobDetail = ArgumentCaptor.forClass(JobDetail.class);
 		ArgumentCaptor<Trigger> trigger = ArgumentCaptor.forClass(Trigger.class);
 		verify(scheduler).scheduleJob(jobDetail.capture(), trigger.capture());
 		
-		assertEquals(jobDetail.getValue().getJobClass(), PDFCManagerJob.class);
-		assertTrue(jobDetail.getValue().getJobDataMap().containsKey(PDFCManagerJob.INSTANCE_DATE_KEY));
-		assertEquals(jobDetail.getValue().getJobDataMap().get(PDFCManagerJob.INSTANCE_DATE_KEY), instanceDate);
+		assertEquals(jobDetail.getValue().getJobClass(), ConverterManagerJob.class);
+		assertTrue(jobDetail.getValue().getJobDataMap().containsKey(ConverterManagerJob.INSTANCE_DATE_KEY));
+		assertEquals(jobDetail.getValue().getJobDataMap().get(ConverterManagerJob.INSTANCE_DATE_KEY), instanceDate);
 	}
 }

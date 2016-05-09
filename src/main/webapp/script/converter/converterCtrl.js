@@ -1,35 +1,34 @@
 angular.module('Boser')
-.controller('CrawlerCtrl', ['$scope','$http', function ($scope, $http) {
+.controller('ConverterCtrl', ['$scope','$http', '$location', function ($scope, $http, $location) {
 	
 	/*
 	 * inizializzazione
 	 */
 	$scope.startBtnDisabled = false;
-	$scope.crawlerStarting = false;
+	$scope.converterStarting = false;
 	$http({
 		method: 'GET',
-		url: 'rest/crawler'
+		url: 'rest/converter'
 	}).success(function(result) {
-		$scope.crawler = result;
+		$scope.converter = result;
 	});
 	
 	$scope.startInstance = function() {
 		$scope.startBtnDisabled = true;
-		$scope.crawlerStarting = true;
+		$scope.converterStarting = true;
 		$http({
     		method: 'PUT',
-    		url: 'rest/crawler/start'
+    		url: 'rest/converter/start'
     	}).success(function (response) {
     		/*
     		 * se tutto va bene si aggiorna la lista
     		 */
     		console.log("ok "+response);
-    		$scope.crawlerStarting = false;
-    		$scope.crawler = response;
+    		$scope.converterStarting = false;
+    		$scope.converter = response;
     	}).error(function(data, status, headers, config, statusText) {
     		console.log("ko");
     	});
 	}
 	
-    
 }]);
