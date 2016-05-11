@@ -18,7 +18,15 @@ angular.module('Boser')
 		$scope.crawlerStarting = true;
 		$http({
     		method: 'PUT',
-    		url: 'rest/crawler/start'
+    		url: 'rest/crawler/start',
+			data: {'fakeParam': 'fakeValue'},
+			headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+		    transformRequest: function(obj) {
+		        var str = [];
+		        for(var p in obj)
+		        str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+		        return str.join("&");
+		    }
     	}).success(function (response) {
     		/*
     		 * se tutto va bene si aggiorna la lista
