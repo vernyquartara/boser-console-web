@@ -44,7 +44,7 @@
 
 
 
-<div class="row">
+<!-- <div class="row">
 	<div class="col-md-6 col-md-offset-3">
 		<ul class="list-group">
 			<li class="list-group-item list-group-item-info">Info e	statistiche</li>
@@ -55,4 +55,4 @@
 			<li class="list-group-item">Ore di stand-by mese corrente: 723</li>
 		</ul>
 	</div>
-</div>
+</div> -->

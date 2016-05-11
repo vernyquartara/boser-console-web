@@ -19,9 +19,9 @@
 			<div class="panel-heading">Il crawler &egrave; <strong>attivo</strong></div>
 			<div class="panel-body">
 				<div>
-					<button type="button" class="btn btn-success btn-block" >
+					<a href="http://boser.quartara.it" target="_blank" class="btn btn-success btn-block" role="button">
 						Clicca per accedere  <span class="badge"><span class="glyphicon glyphicon-share-alt"></span></span>
-					</button>
+					</a>
 				</div>
 			</div>
 		</div>
@@ -43,7 +43,7 @@
 
 
 
-
+<!-- 
 <div class="row">
 	<div class="col-md-6 col-md-offset-3">
 		<ul class="list-group">
@@ -56,3 +56,4 @@
 		</ul>
 	</div>
 </div>
+ -->
