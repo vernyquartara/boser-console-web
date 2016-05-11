@@ -8,6 +8,7 @@ import javax.annotation.Resource;
 import javax.ejb.Stateless;
 import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -80,7 +81,7 @@ public class CrawlerService {
 	@PUT
 	@Path("/start")
 	@Produces("application/json")
-	public InstanceDTO startInstance() {
+	public InstanceDTO startInstance(@FormParam("fakeParam") String fakeParam) {
 		log.info("richiesta di avvio crawler");
 		String crawlerInstanceId, solrInstanceId;
 		try {
