@@ -35,7 +35,8 @@ angular.module('Boser')
     		$scope.crawlerStarting = false;
     		$scope.crawler = response;
     	}).error(function(data, status, headers, config, statusText) {
-    		console.log("ko");
+    		console.log("ko "+data);
+    		$scope.crawlerStarting = false;
     	});
 	}
 	
