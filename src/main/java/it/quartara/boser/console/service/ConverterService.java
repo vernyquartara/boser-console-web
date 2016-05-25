@@ -48,8 +48,8 @@ public class ConverterService {
 	
 	@GET
 	@Produces("application/json")
-	public InstanceDTO getCrawlerInstance() {
-		log.debug("controllo status crawler");
+	public InstanceDTO getConverterInstance() {
+		log.debug("controllo status converter");
 		AmazonEC2 ec2 = AWSHelper.createAmazonEC2Client(AWSHelper.CREDENTIALS_PROFILE);
 		
 		String instanceId = null;
@@ -63,10 +63,10 @@ public class ConverterService {
 		}
 
 		Instance instance = AWSHelper.getInstance(ec2, instanceId);
-		log.debug("crawler getInstanceId {}", instance.getInstanceId());
-		log.debug("crawler getLaunchTime {}", instance.getLaunchTime());
-		log.debug("crawler getPublicIpAddress {}", instance.getPublicIpAddress());
-		log.debug("crawler getState().getName() {}", instance.getState().getName());
+		log.debug("converter getInstanceId {}", instance.getInstanceId());
+		log.debug("converter getLaunchTime {}", instance.getLaunchTime());
+		log.debug("converter getPublicIpAddress {}", instance.getPublicIpAddress());
+		log.debug("converter getState().getName() {}", instance.getState().getName());
 		
 		InstanceDTO dto = new InstanceDTO();
 		dto.setInstanceId(instanceId);
@@ -80,7 +80,7 @@ public class ConverterService {
 	@Path("/start")
 	@Produces("application/json")
 	public InstanceDTO startInstance() {
-		log.info("richiesta di avvio crawler");
+		log.info("richiesta di avvio converter");
 		String converterInstanceId;
 		try {
 			Connection conn = ds.getConnection();
@@ -90,9 +90,6 @@ public class ConverterService {
 			throw new WebApplicationException(e);
 		} 
 		
-		/*
-		 * devono essere avviate entrambe le VM, crawler e solr
-		 */
 		AmazonEC2 ec2 = AWSHelper.createAmazonEC2Client(AWSHelper.CREDENTIALS_PROFILE);
         try {
         	Instance converterInstance = AWSHelper.getInstance(ec2, converterInstanceId);

@@ -8,7 +8,8 @@ angular.module('Boser')
 	$scope.crawlerStarting = false;
 	$http({
 		method: 'GET',
-		url: 'rest/crawler'
+		url: 'rest/crawler',
+		ignoreLoadingBar: true
 	}).success(function(result) {
 		$scope.crawler = result;
 	});
@@ -18,15 +19,7 @@ angular.module('Boser')
 		$scope.crawlerStarting = true;
 		$http({
     		method: 'PUT',
-    		url: 'rest/crawler/start',
-			data: {'fakeParam': 'fakeValue'},
-			headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-		    transformRequest: function(obj) {
-		        var str = [];
-		        for(var p in obj)
-		        str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
-		        return str.join("&");
-		    }
+    		url: 'rest/crawler/start'
     	}).success(function (response) {
     		/*
     		 * se tutto va bene si aggiorna la lista

@@ -1,5 +1,5 @@
 angular.module('Boser')
-.controller('ConverterCtrl', ['$scope','$http', '$location', function ($scope, $http, $location) {
+.controller('ConverterCtrl', ['$scope','$http', function ($scope, $http) {
 	
 	/*
 	 * inizializzazione
@@ -8,7 +8,8 @@ angular.module('Boser')
 	$scope.converterStarting = false;
 	$http({
 		method: 'GET',
-		url: 'rest/converter'
+		url: 'rest/converter',
+		ignoreLoadingBar: true
 	}).success(function(result) {
 		$scope.converter = result;
 	});
@@ -28,6 +29,7 @@ angular.module('Boser')
     		$scope.converter = response;
     	}).error(function(data, status, headers, config, statusText) {
     		console.log("ko");
+    		$scope.converterStarting = false;
     	});
 	}
 	

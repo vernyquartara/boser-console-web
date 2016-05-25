@@ -81,7 +81,7 @@ public class CrawlerService {
 	@PUT
 	@Path("/start")
 	@Produces("application/json")
-	public InstanceDTO startInstance(@FormParam("fakeParam") String fakeParam) {
+	public InstanceDTO startInstance() {
 		log.info("richiesta di avvio crawler");
 		String crawlerInstanceId, solrInstanceId;
 		try {
